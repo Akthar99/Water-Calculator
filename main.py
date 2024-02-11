@@ -47,7 +47,10 @@ class App:
         self.frame.grid(column=0, row=0)
         self.sec_frame = ttk.Frame(self.root, padding=10)
         self.sec_frame.grid(column=0, row=1)
+
+        # Logic variables 
         self.var_value = 0
+        self.water_list = []
     
     # create a label for print time 
     def show_time(self):
@@ -77,13 +80,16 @@ class App:
         self.var -= 50
         self.amount.config(text=f"{self.var} ml")
     def except_button_anwser(self):
-        if (self.var < 0):
-            msg = messagebox.showerror("Error on Input", "below zero error.. please enter above zero")
+        if (self.var <= 0):
+            msg = messagebox.showerror("Error on Input", "below zero or zero error.. please enter above zero")
         else:
             self.var_value = self.var
             new_window.destroy()
-            print(self.var_value)
-            self.button.config(state=NORMAL)
+            self.water_list.append(self.var_value)
+            print(self.water_list)
+            self.second += 5
+            self.button.config(state=DISABLED)
+            self.update_timer()
     def cancel_btn(self):
         self.var_value = 0
         new_window.destroy()
@@ -96,7 +102,6 @@ class App:
     # this method create a exra window to get the user input 
     # after getting user inputs it automatically close the window and store a value that user entered in a variable 
     def handle_button(self):
-        self.button.config(state=DISABLED)
         global new_window
         new_window = tk.Toplevel()
         new_window.title("Get the water amount")
@@ -131,11 +136,12 @@ class App:
     # return the 3 hour countdown time
     def timer_countdown(self):
         self.hour = 0
-        self.minute = 1
-        self.second = 59
+        self.minute = 0
+        self.second = 0
 
         return f"{self.hour}:{self.minute}:{self.second}"
     
+    # update the timer using logics and config method 
     def update_timer(self):
         if self.second != 0:
             self.second -= 1
@@ -153,7 +159,46 @@ class App:
         self.timer_label.config(text=f"{self.hour}:{self.minute}:{self.second}")
         self.timer_label.after(1000, self.update_timer)
 
-
+    ### I can use this code to create a timer loop in the program
+    
+    """import time
+import datetime
+ 
+# Create class that acts as a countdown
+def countdown(h, m, s):
+ 
+    # Calculate the total number of seconds
+    total_seconds = h * 3600 + m * 60 + s
+ 
+    # While loop that checks if total_seconds reaches zero
+    # If not zero, decrement total time by one second
+    while total_seconds > 0:
+ 
+        # Timer represents time left on countdown
+        timer = datetime.timedelta(seconds = total_seconds)
+        
+        # Prints the time left on the timer
+        print(timer, end="\r")
+ 
+        # Delays the program one second
+        time.sleep(1)
+ 
+        # Reduces total time by one second
+        total_seconds -= 1
+ 
+    print("Bzzzt! The countdown is at zero seconds!")
+ 
+# Inputs for hours, minutes, seconds on timer
+h = input("Enter the time in hours: ")
+m = input("Enter the time in minutes: ")
+s = input("Enter the time in seconds: ")
+countdown(int(h), int(m), int(s))
+    
+    Keyword arguments:
+    argument -- description
+    Return: return_description
+    """
+    
 
     # create a timer label
     def timer(self):
@@ -170,7 +215,6 @@ class App:
         self.date_section()
         self.Input_button()
         self.timer()
-        self.update_timer()
         print(self.time.get_time())
         self.root.mainloop()
 
