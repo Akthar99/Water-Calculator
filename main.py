@@ -91,6 +91,7 @@ class App:
     def closed(self):
         self.button.config(state=NORMAL)
         new_window.destroy()
+        
     # this method create a exra window to get the user input 
     # after getting user inputs it automatically close the window and store a value that user entered in a variable 
     def handle_button(self):
