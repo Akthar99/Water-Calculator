@@ -33,7 +33,8 @@ class Time:
         
         return year, month, day
     
-    def time_count(self):
+    # this method creates a timer countdown 
+    def timer(self):
         pass
 
 class App:
@@ -49,7 +50,7 @@ class App:
         self.var_value = 0
     
     # create a label for print time 
-    def timer(self):
+    def show_time(self):
         self.time_label = ttk.Label(self.frame, text="", font=("Helvetica", 20), foreground="green")
         self.time_label.pack(padx=20, pady=20)
 
@@ -91,7 +92,7 @@ class App:
     def closed(self):
         self.button.config(state=NORMAL)
         new_window.destroy()
-        
+
     # this method create a exra window to get the user input 
     # after getting user inputs it automatically close the window and store a value that user entered in a variable 
     def handle_button(self):
@@ -127,12 +128,49 @@ class App:
         self.button = ttk.Button(self.sec_frame, text="Drink Water", command=self.handle_button, width=30)
         self.button.pack(padx=20, pady=20)
 
+    # return the 3 hour countdown time
+    def timer_countdown(self):
+        self.hour = 0
+        self.minute = 1
+        self.second = 59
+
+        return f"{self.hour}:{self.minute}:{self.second}"
+    
+    def update_timer(self):
+        if self.second != 0:
+            self.second -= 1
+
+        if self.hour == 0 and self.minute == 0:
+            if self.second == 0 and self.minute == 0 and self.hour == 0:
+                self.button.config(state=NORMAL)
+        if self.second == 0 and self.minute !=0:
+            self.minute -= 1
+            self.second = 59
+        else:
+            if self.minute == 0 and self.hour !=0:
+                self.hour -= 1
+                self.minute = 59
+        self.timer_label.config(text=f"{self.hour}:{self.minute}:{self.second}")
+        self.timer_label.after(1000, self.update_timer)
+
+
+
+    # create a timer label
+    def timer(self):
+        self.timer_time = self.timer_countdown()
+        self.timer_label = ttk.Label(self.sec_frame, text=self.current_time,  font=("Helvetica", 20), foreground="green")
+        self.timer_label.pack(padx=10,
+                              pady=20,
+                              expand=True)
+
     # run the window and this method include mainloop 
     def run(self):
-        self.timer()
+        self.show_time()
         self.update_time()
         self.date_section()
         self.Input_button()
+        self.timer()
+        self.update_timer()
         print(self.time.get_time())
         self.root.mainloop()
 
