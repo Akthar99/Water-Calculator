@@ -1,10 +1,12 @@
 import os 
 import time
+import datetime
 from datetime import date 
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+import sqlite3
 
 class Time:
     def __init__(self) -> None:
@@ -47,10 +49,23 @@ class App:
         self.frame.grid(column=0, row=0)
         self.sec_frame = ttk.Frame(self.root, padding=10)
         self.sec_frame.grid(column=0, row=1)
+        self.database = Datebase()
 
         # Logic variables 
         self.var_value = 0
         self.water_list = []
+        self.wait_time = 0
+        self.second_window_open = False
+
+    # add a waterTable to the database date, time, wait_time, water are rows of that table 
+    @staticmethod
+    def create_database():
+        database = Datebase()
+        timer = Time()
+        query = "CREATE TABLE waterTable (date text,time text,wait_time integer default 0,water integer)"
+        query2 = f"INSERT INTO waterTable VALUES ('{str(timer.datetime())}', '{timer.get_time()}', 0, 0)"
+        database.runQuery(query)
+        database.runQuery(query2)
     
     # create a label for print time 
     def show_time(self):
@@ -87,16 +102,20 @@ class App:
             new_window.destroy()
             self.water_list.append(self.var_value)
             print(self.water_list)
-            self.second += 5
             self.button.config(state=DISABLED)
-            self.update_timer()
+            self.second_window_open = False
+            # Give the timer how much time to wait in seconds 
+            self.wait_time += 5
+            
     def cancel_btn(self):
         self.var_value = 0
         new_window.destroy()
+        self.second_window_open = False
         print(self.var_value)
         self.button.config(state=NORMAL)
     def closed(self):
         self.button.config(state=NORMAL)
+        self.second_window_open = False
         new_window.destroy()
 
     # this method create a exra window to get the user input 
@@ -125,6 +144,8 @@ class App:
                            pady=20,
                            side='left',
                            expand=True)
+        self.second_window_open = True
+        self.button.config(state=DISABLED)
         new_window.protocol("WM_DELETE_WINDOW", self.closed)
 
     # create a button for the user input 
@@ -135,78 +156,39 @@ class App:
 
     # return the 3 hour countdown time
     def timer_countdown(self):
-        self.hour = 0
-        self.minute = 0
-        self.second = 0
 
-        return f"{self.hour}:{self.minute}:{self.second}"
+        pass
     
     # update the timer using logics and config method 
     def update_timer(self):
-        if self.second != 0:
-            self.second -= 1
-
-        if self.hour == 0 and self.minute == 0:
-            if self.second == 0 and self.minute == 0 and self.hour == 0:
-                self.button.config(state=NORMAL)
-        if self.second == 0 and self.minute !=0:
-            self.minute -= 1
-            self.second = 59
-        else:
-            if self.minute == 0 and self.hour !=0:
-                self.hour -= 1
-                self.minute = 59
-        self.timer_label.config(text=f"{self.hour}:{self.minute}:{self.second}")
+        if self.wait_time == 0 and self.second_window_open == False:
+            self.button.config(state=NORMAL)
+        self.timer_count = datetime.timedelta(seconds= self.wait_time)
+        if self.wait_time != 0:
+            self.wait_time -= 1
+        self.timer_label.config(text=f"{self.timer_count}")
         self.timer_label.after(1000, self.update_timer)
 
-    ### I can use this code to create a timer loop in the program
-    
-    """import time
-import datetime
- 
-# Create class that acts as a countdown
-def countdown(h, m, s):
- 
-    # Calculate the total number of seconds
-    total_seconds = h * 3600 + m * 60 + s
- 
-    # While loop that checks if total_seconds reaches zero
-    # If not zero, decrement total time by one second
-    while total_seconds > 0:
- 
-        # Timer represents time left on countdown
-        timer = datetime.timedelta(seconds = total_seconds)
-        
-        # Prints the time left on the timer
-        print(timer, end="\r")
- 
-        # Delays the program one second
-        time.sleep(1)
- 
-        # Reduces total time by one second
-        total_seconds -= 1
- 
-    print("Bzzzt! The countdown is at zero seconds!")
- 
-# Inputs for hours, minutes, seconds on timer
-h = input("Enter the time in hours: ")
-m = input("Enter the time in minutes: ")
-s = input("Enter the time in seconds: ")
-countdown(int(h), int(m), int(s))
-    
-    Keyword arguments:
-    argument -- description
-    Return: return_description
-    """
-    
 
     # create a timer label
     def timer(self):
         self.timer_time = self.timer_countdown()
-        self.timer_label = ttk.Label(self.sec_frame, text=self.current_time,  font=("Helvetica", 20), foreground="green")
+        self.timer_label = ttk.Label(self.sec_frame, text="0:0:0",  font=("Helvetica", 20), foreground="green")
         self.timer_label.pack(padx=10,
                               pady=20,
                               expand=True)
+    # save the data to database before quit the program
+    def close_window(self):
+        if self.wait_time > 0:
+            query = f"UPDATE waterTable SET wait_time = {self.wait_time} WHERE date = '{str(self.time.get_time())}'"
+            self.database.runQuery(query)
+        # print the remaining time if the user closed the program while running the timer
+        self.get_and_print_wait_time()
+        self.root.destroy()
+    def get_and_print_wait_time(self):
+        query = f"SELECT * FROM waterTable"
+        self.remain_wait_time = self.database.runQuery(query, None, True)
+        print(self.remain_wait_time)
 
     # run the window and this method include mainloop 
     def run(self):
@@ -215,11 +197,34 @@ countdown(int(h), int(m), int(s))
         self.date_section()
         self.Input_button()
         self.timer()
+        self.update_timer()
         print(self.time.get_time())
+        self.root.protocol("WM_DELETE_WINDOW", self.close_window)
         self.root.mainloop()
+
+class Datebase:
+    def __init__(self):
+        pass
+    @staticmethod
+    def runQuery(sql, data=None, receive=False):
+        connection = sqlite3.connect("database.db")
+        cursor = connection.cursor()
+        if data:
+            cursor.execute(sql, data)
+        else:
+            cursor.execute(sql)
+        
+        if receive:
+            return cursor.fetchall()
+        else:
+            connection.commit()
+        
+        connection.close()
 
 
 
 if __name__ == "__main__":
     app = App()
+    if not os.path.isfile("database.db"):
+        app.create_database()
     app.run()

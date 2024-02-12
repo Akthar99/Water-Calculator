@@ -20,3 +20,10 @@ This app has to be run on the device background
 ## Importent Thing
 
 when the user accidentaly close or intentionaly close the app : Before user exit the app always it must save the time user exit the app on the database. Therefor when user again start the app next time App will check the time gap user skipped or if it is a new day.
+
+## Database 
+
+time 
+date 
+wait_time
+water
