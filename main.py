@@ -1,7 +1,7 @@
 import os 
 import time
-import datetime
-from datetime import date 
+import datetime as dt
+from datetime import date, datetime
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk
@@ -14,7 +14,7 @@ class Time:
 
     # return the current time 
     def get_time(self):
-        current_time = time.ctime()
+        current_time = int(time.time())
         return current_time
     
     # this method return a tuple of ("hour", "minute", "second")
@@ -62,10 +62,28 @@ class App:
     def create_database():
         database = Datebase()
         timer = Time()
-        query = "CREATE TABLE waterTable (date text,time text,wait_time integer default 0,water integer)"
-        query2 = f"INSERT INTO waterTable VALUES ('{str(timer.datetime())}', '{timer.get_time()}', 0, 0)"
+        query = "CREATE TABLE waterTable (date date, time integer, wait_time integer default 0, water integer)"
+        today = datetime.now().strftime("%Y-%m-%d")
+        query2_data = [str(today), timer.get_time(), 0, 0]
         database.runQuery(query)
-        database.runQuery(query2)
+        database.runQuery(f'INSERT INTO waterTable VALUES ("{query2_data[0]}", {query2_data[1]}, {query2_data[2]}, {query2_data[3]})')
+    
+    # check if this is a new day or not 
+    def check_new_day(self):
+        today = datetime.now().strftime("%Y-%m-%d")
+        query = f"SELECT date FROM waterTable WHERE date = '{today}'"
+        result = self.database.runQuery(query, None, True)
+        if not result:
+            query2_data = [str(today), self.time.get_time(), 0, 0]
+            self.database.runQuery(f'INSERT INTO waterTable VALUES ("{query2_data[0]}", {query2_data[1]}, {query2_data[2]}, {query2_data[3]})')
+    
+    # check if the program is closed before the timer is finished
+    def check_remaining_time(self):
+        today = datetime.now().strftime("%Y-%m-%d")
+        query = f"SELECT wait_time FROM waterTable WHERE date = '{today}'"
+        result = self.database.runQuery(query, None, True)
+        if result[0][0]:
+            self.wait_time = result[0][0]
     
     # create a label for print time 
     def show_time(self):
@@ -105,7 +123,7 @@ class App:
             self.button.config(state=DISABLED)
             self.second_window_open = False
             # Give the timer how much time to wait in seconds 
-            self.wait_time += 5
+            self.wait_time += 10
             
     def cancel_btn(self):
         self.var_value = 0
@@ -150,7 +168,7 @@ class App:
 
     # create a button for the user input 
     def Input_button(self):
-        print(self.var_value)
+        # print(self.var_value)
         self.button = ttk.Button(self.sec_frame, text="Drink Water", command=self.handle_button, width=30)
         self.button.pack(padx=20, pady=20)
 
@@ -163,7 +181,9 @@ class App:
     def update_timer(self):
         if self.wait_time == 0 and self.second_window_open == False:
             self.button.config(state=NORMAL)
-        self.timer_count = datetime.timedelta(seconds= self.wait_time)
+        elif self.wait_time != 0:
+            self.button.config(state=DISABLED)
+        self.timer_count = dt.timedelta(seconds= self.wait_time)
         if self.wait_time != 0:
             self.wait_time -= 1
         self.timer_label.config(text=f"{self.timer_count}")
@@ -180,45 +200,42 @@ class App:
     # save the data to database before quit the program
     def close_window(self):
         if self.wait_time > 0:
-            query = f"UPDATE waterTable SET wait_time = {self.wait_time} WHERE date = '{str(self.time.get_time())}'"
+            query = f"UPDATE waterTable SET wait_time = {self.wait_time} WHERE date = '{datetime.now().strftime('%Y-%m-%d')}'"
             self.database.runQuery(query)
         # print the remaining time if the user closed the program while running the timer
         self.get_and_print_wait_time()
         self.root.destroy()
     def get_and_print_wait_time(self):
         query = f"SELECT * FROM waterTable"
-        self.remain_wait_time = self.database.runQuery(query, None, True)
+        self.remain_wait_time = self.database.runQuery(sql=query, receive=True)
         print(self.remain_wait_time)
 
     # run the window and this method include mainloop 
     def run(self):
+        self.check_new_day()
+        self.check_remaining_time()
         self.show_time()
         self.update_time()
         self.date_section()
         self.Input_button()
         self.timer()
         self.update_timer()
-        print(self.time.get_time())
         self.root.protocol("WM_DELETE_WINDOW", self.close_window)
         self.root.mainloop()
 
 class Datebase:
     def __init__(self):
         pass
-    @staticmethod
-    def runQuery(sql, data=None, receive=False):
+    def runQuery(self, sql, data:list=None, receive=False):
         connection = sqlite3.connect("database.db")
         cursor = connection.cursor()
-        if data:
-            cursor.execute(sql, data)
+        if receive:
+            result = cursor.execute(sql)
+            return result.fetchall()
         else:
             cursor.execute(sql)
-        
-        if receive:
-            return cursor.fetchall()
-        else:
-            connection.commit()
-        
+        connection.commit()
+
         connection.close()
 
 
