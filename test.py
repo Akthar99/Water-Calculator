@@ -24,6 +24,8 @@ class Datebase:
     def all_in_database(self):
         query = f"SELECT * FROM waterTable"
         print(self.runQuery(query, None, True))
+    
+    
 
     def insert_into_database(self):
         query = f"INSERT INTO waterTable (wait_time) VALUES (3)"

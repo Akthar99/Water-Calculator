@@ -57,16 +57,19 @@ class App:
         self.wait_time = 0
         self.second_window_open = False
 
-    # add a waterTable to the database date, time, wait_time, water are rows of that table 
+    # create the database and tables 
+    # create two tabeles waterTable and waterDetail
     @staticmethod
     def create_database():
         database = Datebase()
         timer = Time()
-        query = "CREATE TABLE waterTable (date date, time integer, wait_time integer default 0, water integer)"
+        waterTable = "CREATE TABLE waterTable (date date primary key, wait_time integer default 0, water integer)"
+        waterDetail = "CREATE TABLE waterDetail (date date references waterTable(date), time integer, water_amount integer, foreign key(date) references waterTable(date))"
         today = datetime.now().strftime("%Y-%m-%d")
         query2_data = [str(today), timer.get_time(), 0, 0]
-        database.runQuery(query)
-        database.runQuery(f'INSERT INTO waterTable VALUES ("{query2_data[0]}", {query2_data[1]}, {query2_data[2]}, {query2_data[3]})')
+        database.runQuery(waterTable)
+        database.runQuery(waterDetail)
+        database.runQuery(f'INSERT INTO waterTable VALUES ("{query2_data[0]}", {query2_data[2]}, {query2_data[3]})')
     
     # check if this is a new day or not 
     def check_new_day(self):
@@ -75,7 +78,7 @@ class App:
         result = self.database.runQuery(query, None, True)
         if not result:
             query2_data = [str(today), self.time.get_time(), 0, 0]
-            self.database.runQuery(f'INSERT INTO waterTable VALUES ("{query2_data[0]}", {query2_data[1]}, {query2_data[2]}, {query2_data[3]})')
+            self.database.runQuery(f'INSERT INTO waterTable VALUES ("{query2_data[0]}", {query2_data[2]}, {query2_data[3]})')
     
     # check if the program is closed before the timer is finished
     def check_remaining_time(self):
@@ -120,6 +123,10 @@ class App:
             new_window.destroy()
             self.water_list.append(self.var_value)
             print(self.water_list)
+            
+            # add the water amount and details to the database 
+            self.database.runQuery(f"INSERT INTO waterDetail VALUES ('{datetime.now().strftime('%Y-%m-%d')}', {self.time.get_time()}, {self.var_value})")
+
             self.button.config(state=DISABLED)
             self.second_window_open = False
             # Give the timer how much time to wait in seconds 
@@ -198,13 +205,19 @@ class App:
                               pady=20,
                               expand=True)
     # save the data to database before quit the program
+    # save the remaining time and water amount to the database
     def close_window(self):
-        if self.wait_time > 0:
-            query = f"UPDATE waterTable SET wait_time = {self.wait_time} WHERE date = '{datetime.now().strftime('%Y-%m-%d')}'"
-            self.database.runQuery(query)
+        query = f"UPDATE waterTable SET wait_time = {self.wait_time} WHERE date = '{datetime.now().strftime('%Y-%m-%d')}'"
+        self.database.runQuery(query)
+        # update the water amount of the day
+        # first get the water from table 
+        water = self.database.runQuery(f"SELECT water FROM waterTable WHERE date = '{datetime.now().strftime('%Y-%m-%d')}'", receive=True)[0][0]
+        # add the calculated water amount
+        self.database.runQuery(f"UPDATE waterTable SET water = {water + sum(self.water_list)} WHERE date = '{datetime.now().strftime("%Y-%m-%d")}'")
         # print the remaining time if the user closed the program while running the timer
         self.get_and_print_wait_time()
         self.root.destroy()
+
     def get_and_print_wait_time(self):
         query = f"SELECT * FROM waterTable"
         self.remain_wait_time = self.database.runQuery(sql=query, receive=True)
