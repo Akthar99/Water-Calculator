@@ -50,6 +50,7 @@ class App:
         self.sec_frame = ttk.Frame(self.root, padding=10)
         self.sec_frame.grid(column=0, row=1)
         self.database = Datebase()
+        self.dataAnalizer = DataAnalize()
 
         # Logic variables 
         self.var_value = 0
@@ -204,6 +205,17 @@ class App:
         self.timer_label.pack(padx=10,
                               pady=20,
                               expand=True)
+        
+    # creating a menu to show the analysis of the data 
+    def show_data(self):
+        self.menu = Menu(self.root)
+        self.root.config(menu=self.menu)
+        self.data_menu = Menu(self.menu, tearoff=0)
+        self.menu.add_cascade(label="Data", menu=self.data_menu)
+        self.data_menu.add_command(label="Today", command=self.dataAnalizer.today_graph)
+        self.data_menu.add_command(label="Week", command=self.dataAnalizer.week_graph)
+        self.data_menu.add_command(label="Time Analyze", command=self.dataAnalizer.time_analyze)
+
     # save the data to database before quit the program
     # save the remaining time and water amount to the database
     def close_window(self):
@@ -227,6 +239,7 @@ class App:
     def run(self):
         self.check_new_day()
         self.check_remaining_time()
+        self.show_data()
         self.show_time()
         self.update_time()
         self.date_section()
@@ -251,6 +264,52 @@ class Datebase:
 
         connection.close()
 
+# creating new class to analize and visualize the data
+# using matplotlib and pandas
+import pandas as pd
+import matplotlib.pyplot as plt
+class DataAnalize:
+    def __init__(self):
+        self.connection = sqlite3.connect("database.db")
+        self.waterTable = pd.read_sql("SELECT * FROM waterTable", self.connection)
+        self.waterDetail = pd.read_sql("SELECT * FROM waterDetail", self.connection)
+        self.connection.close()
+    
+    # today water collection graph
+    def today_graph(self):
+        today = datetime.now().strftime("%Y-%m-%d")
+        data = self.waterTable[self.waterTable["date"] == today]
+        print(data)
+        plt.bar(data["date"], data["water"])
+        # plt.plot(data["time"], data["water_amount"])
+        plt.title("Today Water Collection")
+        plt.xlabel("Date")
+        plt.ylabel("Water Amount")
+        plt.show()
+
+    # week water collection graph
+    def week_graph(self):
+        data = self.waterTable
+        plt.bar(data["date"], data["water"])
+        plt.title("Week Water Collection")
+        plt.xlabel("Date")
+        plt.ylabel("Water Amount")
+        plt.show()
+
+    # time analyze graph
+    def time_analyze(self):
+        day = datetime.now().strftime("%Y-%m-%d")
+        data = self.waterDetail[self.waterDetail["date"] == day]
+
+        # manipulate date to get the time in HH:MM:SS format
+        data["time"] = pd.to_datetime(data["time"], unit="s").dt.strftime("%H:%M:%S")
+
+        plt.bar(data["time"], data["water_amount"])
+        # plt.scatter(data["time"], data["water_amount"])
+        plt.title("Time Analyze")
+        plt.xlabel("Time")
+        plt.ylabel("Water Amount")
+        plt.show()
 
 
 if __name__ == "__main__":
