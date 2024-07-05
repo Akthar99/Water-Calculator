@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 import sqlite3
+import pickle
 
 class Time:
     def __init__(self) -> None:
@@ -50,13 +51,18 @@ class App:
         self.sec_frame = ttk.Frame(self.root, padding=10)
         self.sec_frame.grid(column=0, row=1)
         self.database = Datebase()
-        self.dataAnalizer = DataAnalize()
 
         # Logic variables 
         self.var_value = 0
         self.water_list = []
-        self.wait_time = 0
         self.second_window_open = False
+        self.send_notification = True
+        # Load the variable from the pickle file
+        with open('src/my_data.pkl', 'rb') as file:
+            settings = pickle.load(file)
+        self.wait_time = settings["wait_time"]
+        self.wait_time_count = settings["wait_time_count"]
+
 
     # create the database and tables 
     # create two tabeles waterTable and waterDetail
@@ -110,12 +116,12 @@ class App:
 
 
     # below three methods is used for the except_button_anwser() method
-    def add(self):
-        self.var += 50
-        self.amount.config(text=f"{self.var} ml")
-    def sub(self):
-        self.var -= 50
-        self.amount.config(text=f"{self.var} ml")
+    def add(self, label, amount):
+        self.var += amount
+        self.amount.config(text=f"{self.var} {label}")
+    def sub(self, label, amount):
+        self.var -= amount
+        self.amount.config(text=f"{self.var} {label}")
     def except_button_anwser(self):
         if (self.var <= 0):
             msg = messagebox.showerror("Error on Input", "below zero or zero error.. please enter above zero")
@@ -131,7 +137,7 @@ class App:
             self.button.config(state=DISABLED)
             self.second_window_open = False
             # Give the timer how much time to wait in seconds 
-            self.wait_time += 10
+            self.wait_time += self.wait_time_count
             
     def cancel_btn(self):
         self.var_value = 0
@@ -154,11 +160,11 @@ class App:
         new_window.maxsize(400,200)
         ttk.Label(new_window, text="Chose the amount you drinked", font=("Helvetica", 10), foreground="black").pack()
         self.var = 50
-        button1 = ttk.Button(new_window, text="+", command=self.add)
+        button1 = ttk.Button(new_window, text="+", command=lambda : self.add(amount=50, label="ml"))
         button1.pack()
         self.amount = ttk.Label(new_window, text=f"{self.var} ml", font=("Helvetica", 10), foreground="black")
         self.amount.pack()
-        button2 = ttk.Button(new_window, text="-", command=self.sub)
+        button2 = ttk.Button(new_window, text="-", command=lambda : self.sub(amount=50, label="ml"))
         button2.pack()
         except_button = ttk.Button(new_window, text="OK", command=self.except_button_anwser)
         except_button.pack(padx=10,
@@ -186,9 +192,15 @@ class App:
         pass
     
     # update the timer using logics and config method 
+    # handle waitin time, button state and notify the user when the timer is finished
     def update_timer(self):
         if self.wait_time == 0 and self.second_window_open == False:
             self.button.config(state=NORMAL)
+            # since we send the notification every 5 minutes we need to check the time
+            notification_wait_time = int(time.strftime("%M"))
+            # if the time is 2 minutes then send the notification once a time
+            if notification_wait_time % 2 == 0 and int(time.strftime("%S")) == 0:
+                GiveNotification("Time is up!", "Time is up ! drink water 💧").send_notification() # send the notification  
         elif self.wait_time != 0:
             self.button.config(state=DISABLED)
         self.timer_count = dt.timedelta(seconds= self.wait_time)
@@ -208,13 +220,71 @@ class App:
         
     # creating a menu to show the analysis of the data 
     def show_data(self):
+        self.dataAnalizer = DataAnalize()
         self.menu = Menu(self.root)
         self.root.config(menu=self.menu)
         self.data_menu = Menu(self.menu, tearoff=0)
+        # data vitualiZing menu
         self.menu.add_cascade(label="Data", menu=self.data_menu)
         self.data_menu.add_command(label="Today", command=self.dataAnalizer.today_graph)
         self.data_menu.add_command(label="Week", command=self.dataAnalizer.week_graph)
         self.data_menu.add_command(label="Time Analyze", command=self.dataAnalizer.time_analyze)
+        # creating settings menu 
+        self.settings_menu = Menu(self.menu, tearoff=0)
+        self.menu.add_cascade(label="Settings", menu=self.settings_menu)
+        # add a check button to turn on and off the notification default is on
+        self.settings_menu.add_checkbutton(label="Notification", command=self.notification, onvalue=True, offvalue=False)
+        # add a command to change the wait time of the timer
+        self.settings_menu.add_command(label="Change Wait Timer", command=self.change_wait_time)
+    
+    # create a notification method to turn on and off the notification
+    def notification(self):
+        if self.send_notification:
+            self.send_notification = False
+        else:
+            self.send_notification = True
+    # change the wait time of the timer
+    def change_wait_time(self):
+        # create a new window to get the user input
+        self.change_wait_time_wnd = tk.Toplevel()
+        self.change_wait_time_wnd.title("Change Timer")
+        self.change_wait_time_wnd.geometry("400x200")
+        self.change_wait_time_wnd.maxsize(400,200)
+        ttk.Label(self.change_wait_time_wnd, text="Chose the time interval you perfer", font=("Helvetica", 10), foreground="black").pack()
+        self.var2 = 60
+        button1 = ttk.Button(self.change_wait_time_wnd, text="+", command=lambda: self.add(amount=60, label="sec"))
+        button1.pack()
+        self.amount = ttk.Label(self.change_wait_time_wnd, text=f"{self.var} sec", font=("Helvetica", 10), foreground="black")
+        self.amount.pack()
+        button2 = ttk.Button(self.change_wait_time_wnd, text="-", command=lambda: self.sub(amount=60, label="sec"))
+        button2.pack()
+        except_button = ttk.Button(self.change_wait_time_wnd, text="OK", command=self.change_wait_time_anwser)
+        except_button.pack(padx=10,
+                           pady=20,
+                           side='right',
+                           expand=True)
+        cancel_button = ttk.Button(self.change_wait_time_wnd, text="Cancel", command=lambda: self.change_wait_time_wnd.destroy())
+        cancel_button.pack(padx=10,
+                            pady=20,
+                            side='left',
+                            expand=True)
+        self.second_window_open = True
+        self.button.config(state=DISABLED)
+        self.change_wait_time_wnd.protocol("WM_DELETE_WINDOW", self.cwtwn_closed)
+    def change_wait_time_anwser(self):
+        if (self.var <= 0):
+            msg = messagebox.showerror("Error on Input", "below zero or zero error.. please enter above zero")
+        else:
+            self.wait_time_count = self.var
+            self.change_wait_time_wnd.destroy()
+            self.second_window_open = False
+            self.button.config(state=NORMAL)
+            print(self.wait_time)
+    # close chaange wait time window 
+    def cwtwn_closed(self):
+        self.button.config(state=NORMAL)
+        self.second_window_open = False
+        self.change_wait_time_wnd.destroy()
 
     # save the data to database before quit the program
     # save the remaining time and water amount to the database
@@ -311,7 +381,28 @@ class DataAnalize:
         plt.ylabel("Water Amount")
         plt.show()
 
+# import the winnotify module to send the notification
+from winotify import Notification, audio
+# create a class to send a notification 
+# <a href="https://www.flaticon.com/free-icons/water" title="water icons">Water icons created by Freepik - Flaticon</a>
+class GiveNotification:
+    def __init__(self, title:str, message:str):
+        self.title = title
+        self.message = message
+        self.app_id = "Water Calculator"
+        self.icon = r"C:\GODOT\Python\Git Clone\Water-Calculator\src\water-bottle.png"
+        # send the notification
+        self.send_notification()
 
+    def send_notification(self):
+        toast = Notification(app_id=self.app_id,
+                     title=self.title,
+                     msg=self.message,
+                     icon=self.icon)
+
+        toast.show()
+
+        
 if __name__ == "__main__":
     app = App()
     if not os.path.isfile("database.db"):

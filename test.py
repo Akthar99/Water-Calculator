@@ -1,4 +1,5 @@
 import sqlite3
+import time
 # from main import Time as time
 
 # class Datebase:
@@ -95,25 +96,44 @@ def panda():
     print(replace_data)
     # drop
     # remove_duplicated_data = sql_data.drop_duplicates()
-panda()
+# panda()
 
-import tkinter as tk
-def on_option_select():
-    selected = selected_option.get()
-    result_label.config(text=f"Selected Option: {selected}")
-root = tk.Tk()
-root.title("Dropdown Menu Example")
-root.geometry("400x300")
-# Create a StringVar to hold the selected option
-selected_option = tk.StringVar()
-# Create the dropdown menu
-options = ["Option 1", "Option 2", "Option 3", "Option 4"]
-dropdown = tk.OptionMenu(root, selected_option, *options)
-dropdown.pack(pady=10)
-# Add a button to display the selected option
-show_button = tk.Button(root, text="Show Selection", command=on_option_select)
-show_button.pack()
-# Label to display the selected option
-result_label = tk.Label(root, text="")
-result_label.pack()
-root.mainloop()
+# import tkinter as tk
+# def on_option_select():
+#     selected = selected_option.get()
+#     result_label.config(text=f"Selected Option: {selected}")
+# root = tk.Tk()
+# root.title("Dropdown Menu Example")
+# root.geometry("400x300")
+# # Create a StringVar to hold the selected option
+# selected_option = tk.StringVar()
+# # Create the dropdown menu
+# options = ["Option 1", "Option 2", "Option 3", "Option 4"]
+# dropdown = tk.OptionMenu(root, selected_option, *options)
+# dropdown.pack(pady=10)
+# # Add a button to display the selected option
+# show_button = tk.Button(root, text="Show Selection", command=on_option_select)
+# show_button.pack()
+# # Label to display the selected option
+# result_label = tk.Label(root, text="")
+# result_label.pack()
+# root.mainloop()
+
+import pickle
+
+# # Define the data to be saved
+# settings = {"wait_time": 0, "wait_time_count": 30}
+
+# # Save the variable to a pickle file
+# with open('my_data.pkl', 'wb') as file:
+#     pickle.dump(settings, file)
+
+# print("Data has been saved to my_data.pkl")
+
+
+# Load the variable from the pickle file
+with open('my_data.pkl', 'rb') as file:
+    my_variable = pickle.load(file)
+
+# Use the loaded data
+print("Data loaded from my_data.pkl:", type(my_variable["wait_time"]))
